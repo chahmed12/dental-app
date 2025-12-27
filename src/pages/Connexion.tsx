@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Stethoscope, Mail, Lock, ArrowRight, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 
 type ProfileType = "patient" | "dentiste" | null;
 
@@ -36,27 +37,48 @@ const Connexion = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      // Simulation de connexion (front-end only comme spécifié)
-      toast({
-        title: "Connexion réussie !",
-        description: `Bienvenue sur votre espace ${selectedProfile === "patient" ? "patient" : "professionnel"}.`,
-      });
+      try {
+        const response = await apiRequest<any>("/auth/login", "POST", {
+          email: formData.email,
+          motDePasse: formData.motDePasse,
+        });
 
-      // Persist login state
-      localStorage.setItem("user", JSON.stringify({
-        email: formData.email,
-        profile: selectedProfile,
-        isLoggedIn: true
-      }));
+        // DEBUG: Inspecter la réponse (supprimé)
+        // alert("Réponse du serveur: " + JSON.stringify(response));
 
+        if (!response || !response.id) {
+          throw new Error("Identifiants incorrects ou utilisateur inexistant.");
+        }
 
-      if (selectedProfile === "patient") {
-        navigate("/rendez-vous");
-      } else {
-        navigate("/aide-soignant");
+        toast({
+          title: "Connexion réussie !",
+          description: `Bienvenue ${response.prenom} ${response.nom}`,
+        });
+
+        // Determine profile based on backend role
+        const profile = response.role === "PATIENT" ? "patient" : "dentiste";
+
+        // Persist login state with real data
+        localStorage.setItem("user", JSON.stringify({
+          ...response,
+          profile: profile,
+          isLoggedIn: true
+        }));
+
+        if (profile === "patient") {
+          navigate("/profile-patient");
+        } else {
+          navigate("/profile-aide-soignant");
+        }
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Erreur de connexion",
+          description: error.message || "Impossible de se connecter",
+        });
       }
     }
   };
@@ -247,7 +269,7 @@ const Connexion = () => {
               Pas encore de compte ?{" "}
               <button
                 type="button"
-                onClick={() => navigate("/inscription-dentiste")}
+                onClick={() => navigate("/aide-soignant")}
                 className="text-primary hover:underline font-medium inline-flex items-center gap-1"
               >
                 <UserPlus className="w-4 h-4" />

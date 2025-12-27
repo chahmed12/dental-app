@@ -1,4 +1,5 @@
 import { FileText, Calendar, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface Publication {
   id: number;
@@ -45,13 +46,29 @@ const publications: Publication[] = [
 ];
 
 const categorieColors: Record<string, string> = {
-  Hygiène: "bg-success/10 text-success",
-  Innovation: "bg-primary/10 text-primary",
-  Prévention: "bg-warning/10 text-warning",
-  Esthétique: "bg-accent text-accent-foreground",
+  "Hygiène": "bg-success/10 text-success",
+  "Innovation": "bg-primary/10 text-primary",
+  "Actualités/innovation": "bg-primary/10 text-primary", // Mapped to Innovation style
+  "Prévention": "bg-warning/10 text-warning",
+  "Esthétique": "bg-accent text-accent-foreground",
+  "Article scientifique": "bg-blue-100 text-blue-700",
+  "Étude de cas": "bg-gray-100 text-gray-700",
+  "Lancement d'un produit ou service": "bg-purple-100 text-purple-700",
 };
 
 const Publications = () => {
+  const [publicationsList, setPublicationsList] = useState<Publication[]>(publications);
+
+  useEffect(() => {
+    const storedPubs = localStorage.getItem("publications");
+    if (storedPubs) {
+      const parsedPubs = JSON.parse(storedPubs);
+      // Combine stored pubs with default static pubs, ensuring no ID collisions if necessary
+      // For simplicity here, we prepend valid stored pubs
+      setPublicationsList([...parsedPubs, ...publications]);
+    }
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-12 animate-fade-up">
@@ -62,7 +79,7 @@ const Publications = () => {
       </div>
 
       <div className="space-y-6">
-        {publications.map((pub, index) => (
+        {publicationsList.map((pub, index) => (
           <article
             key={pub.id}
             className="card-dental group cursor-pointer animate-fade-up"
@@ -75,7 +92,7 @@ const Publications = () => {
 
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${categorieColors[pub.categorie]}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${categorieColors[pub.categorie] || "bg-gray-100 text-gray-800"}`}>
                     {pub.categorie}
                   </span>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">

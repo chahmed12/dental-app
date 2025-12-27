@@ -1,148 +1,388 @@
-import { User, Calendar, Clock, MapPin, Phone, Mail } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, Mail, Phone, Stethoscope, CheckCircle, HeartPulse } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 
-const aideSoignantInfo = {
-  nom: "Martin",
-  prenom: "Sophie",
-  email: "sophie.martin@dentalcare.com",
-  telephone: "+33 6 12 34 56 78",
-  poste: "Assistante dentaire",
-  service: "Chirurgie dentaire",
-};
+import { diplomes } from "@/lib/constants";
 
-const rendezvousPlanifies = [
-  {
-    id: 1,
-    patient: "Jean Dupont",
-    dentiste: "Dr. Laurent Bernard",
-    date: "2024-12-20",
-    heure: "09:00",
-    type: "Consultation",
-    statut: "Confirmé",
-  },
-  {
-    id: 2,
-    patient: "Marie Lambert",
-    dentiste: "Dr. Claire Moreau",
-    date: "2024-12-20",
-    heure: "10:30",
-    type: "Détartrage",
-    statut: "En attente",
-  },
-  {
-    id: 3,
-    patient: "Pierre Martin",
-    dentiste: "Dr. Laurent Bernard",
-    date: "2024-12-20",
-    heure: "14:00",
-    type: "Extraction",
-    statut: "Confirmé",
-  },
-  {
-    id: 4,
-    patient: "Anne Rousseau",
-    dentiste: "Dr. Claire Moreau",
-    date: "2024-12-21",
-    heure: "11:00",
-    type: "Blanchiment",
-    statut: "Confirmé",
-  },
-];
+interface AideSoignantForm {
+  nom: string;
+  prenom: string;
+  adresse: string;
+  telephone: string;
+  email: string;
+  motDePasse: string;
+  confirmMotDePasse: string;
+  dateNaissance: string;
+  diplome: string;
+  sexe: string;
+  photo: File | null;
+}
 
 const AideSoignant = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Partial<AideSoignantForm>>({});
+  const [formData, setFormData] = useState<AideSoignantForm>({
+    nom: "",
+    prenom: "",
+    adresse: "",
+    telephone: "",
+    email: "",
+    motDePasse: "",
+    confirmMotDePasse: "",
+    dateNaissance: "",
+    diplome: "",
+    sexe: "",
+    photo: null,
+  });
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<AideSoignantForm> = {};
+
+    if (!formData.nom.trim()) newErrors.nom = "Le nom est requis";
+    if (!formData.prenom.trim()) newErrors.prenom = "Le prénom est requis";
+    if (!formData.adresse.trim()) newErrors.adresse = "L'adresse est requise";
+    if (!formData.telephone.trim()) {
+      newErrors.telephone = "Le téléphone est requis";
+    } else if (!/^[0-9+\s-]{8,}$/.test(formData.telephone)) {
+      newErrors.telephone = "Format de téléphone invalide";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "L'email est requis";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Format d'email invalide";
+    }
+    if (!formData.motDePasse) {
+      newErrors.motDePasse = "Le mot de passe est requis";
+    } else if (formData.motDePasse.length < 6) {
+      newErrors.motDePasse = "Le mot de passe doit contenir au moins 6 caractères";
+    }
+    if (formData.motDePasse !== formData.confirmMotDePasse) {
+      newErrors.confirmMotDePasse = "Les mots de passe ne correspondent pas";
+    }
+    if (!formData.dateNaissance) newErrors.dateNaissance = "La date de naissance est requise";
+    if (!formData.diplome) newErrors.diplome = "Le diplôme est requis";
+    if (!formData.sexe) newErrors.sexe = "Le sexe est requis";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('🔴 Form submitted!');
+    console.log('📝 Form data:', formData);
+
+    if (validateForm()) {
+      console.log('✅ Validation passed');
+      try {
+        const { confirmMotDePasse, photo, ...data } = formData;
+
+        const payload = {
+          nom: data.nom,
+          prenom: data.prenom,
+          email: data.email,
+          motDePasse: data.motDePasse,
+          specialite: data.diplome,
+          telephone: data.telephone,
+          sexe: data.sexe,
+        };
+
+        console.log('📤 Sending payload:', payload);
+        await apiRequest("/auth/register/dentiste", "POST", payload);
+
+        setIsSubmitted(true);
+        toast({
+          title: "Inscription réussie !",
+          description: "Votre compte aide-soignant a été créé avec succès.",
+        });
+      } catch (error: any) {
+        console.error('❌ Registration error:', error);
+        toast({
+          variant: "destructive",
+          title: "Erreur d'inscription",
+          description: error.message || "Impossible de créer le compte",
+        });
+      }
+    } else {
+      console.log('❌ Validation failed, errors:', errors);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    const errorKey = name as keyof AideSoignantForm;
+    if (errors[errorKey]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFormData(prev => ({ ...prev, photo: e.target.files![0] }));
+    }
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="max-w-2xl mx-auto animate-fade-up">
+        <div className="card-dental text-center py-12">
+          <div className="w-20 h-20 rounded-full bg-accent flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-accent-foreground" />
+          </div>
+          <h2 className="page-title mb-4">Inscription réussie !</h2>
+          <p className="text-muted-foreground text-lg mb-8 max-w-md mx-auto">
+            Votre compte aide-soignant a été créé avec succès. Vous pouvez maintenant vous connecter.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onClick={() => navigate("/")} className="btn-primary">
+              Se connecter
+            </button>
+            <button onClick={() => navigate("/profile-aide-soignant")} className="btn-secondary">
+              Voir le profil (Demo)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       <div className="text-center mb-8 animate-fade-up">
-        <h2 className="page-title">Espace Aide-Soignant</h2>
+        <div className="w-16 h-16 rounded-xl bg-accent flex items-center justify-center mx-auto mb-4">
+          <HeartPulse className="w-8 h-8 text-accent-foreground" />
+        </div>
+        <h2 className="page-title">Inscription Aide-Soignant</h2>
         <p className="text-muted-foreground">
-          Consultez vos informations professionnelles et les rendez-vous planifiés
+          Créez votre compte professionnel pour assister l'équipe dentaire
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Informations professionnelles */}
-        <div className="lg:col-span-1 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-          <div className="card-dental h-full">
-            <h3 className="section-title flex items-center gap-2 mb-6">
-              <User className="w-5 h-5 text-primary" />
-              Informations
-            </h3>
-
-            <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 rounded-full hero-gradient flex items-center justify-center mb-4">
-                <span className="text-2xl font-bold text-primary-foreground">
-                  {aideSoignantInfo.prenom[0]}{aideSoignantInfo.nom[0]}
-                </span>
-              </div>
-              <h4 className="text-lg font-semibold text-foreground">
-                {aideSoignantInfo.prenom} {aideSoignantInfo.nom}
-              </h4>
-              <p className="text-muted-foreground">{aideSoignantInfo.poste}</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground">{aideSoignantInfo.service}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground">{aideSoignantInfo.telephone}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-muted-foreground break-all">{aideSoignantInfo.email}</span>
-              </div>
-            </div>
+      <form onSubmit={handleSubmit} className="card-dental animate-fade-up" style={{ animationDelay: "0.1s" }}>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Nom */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              Nom
+            </label>
+            <input
+              type="text"
+              name="nom"
+              value={formData.nom}
+              onChange={handleChange}
+              className={`form-input ${errors.nom ? "border-destructive" : ""}`}
+              placeholder="Saisir votre nom.."
+            />
+            {errors.nom && <p className="text-destructive text-sm mt-1">{errors.nom}</p>}
           </div>
-        </div>
 
-        {/* Rendez-vous planifiés */}
-        <div className="lg:col-span-2 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-          <div className="card-dental">
-            <h3 className="section-title flex items-center gap-2 mb-6">
-              <Calendar className="w-5 h-5 text-primary" />
-              Rendez-vous planifiés
-            </h3>
+          {/* Prénom */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" />
+              Prénom
+            </label>
+            <input
+              type="text"
+              name="prenom"
+              value={formData.prenom}
+              onChange={handleChange}
+              className={`form-input ${errors.prenom ? "border-destructive" : ""}`}
+              placeholder="Saisir votre prénom.."
+            />
+            {errors.prenom && <p className="text-destructive text-sm mt-1">{errors.prenom}</p>}
+          </div>
 
-            <div className="space-y-4">
-              {rendezvousPlanifies.map((rdv) => (
-                <div
-                  key={rdv.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg bg-secondary/50 border border-border"
-                >
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{rdv.heure}</p>
-                      <p className="text-sm text-muted-foreground">{rdv.date}</p>
-                    </div>
-                  </div>
+          {/* Adresse */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Adresse
+            </label>
+            <input
+              type="text"
+              name="adresse"
+              value={formData.adresse}
+              onChange={handleChange}
+              className={`form-input ${errors.adresse ? "border-destructive" : ""}`}
+              placeholder="Saisir votre adresse .."
+            />
+            {errors.adresse && <p className="text-destructive text-sm mt-1">{errors.adresse}</p>}
+          </div>
 
-                  <div className="flex-1 sm:border-l sm:border-border sm:pl-4">
-                    <p className="font-medium text-foreground">{rdv.patient}</p>
-                    <p className="text-sm text-muted-foreground">{rdv.dentiste}</p>
-                    <p className="text-sm text-primary">{rdv.type}</p>
-                  </div>
+          {/* Téléphone */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Téléphone
+            </label>
+            <input
+              type="tel"
+              name="telephone"
+              value={formData.telephone}
+              onChange={handleChange}
+              className={`form-input ${errors.telephone ? "border-destructive" : ""}`}
+              placeholder="Saisir votre téléphone .."
+            />
+            {errors.telephone && <p className="text-destructive text-sm mt-1">{errors.telephone}</p>}
+          </div>
 
-                  <div className="flex-shrink-0">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        rdv.statut === "Confirmé"
-                          ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {rdv.statut}
-                    </span>
-                  </div>
-                </div>
+          {/* Email */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className={`form-input ${errors.email ? "border-destructive" : ""}`}
+              placeholder="Saisir votre E-mail .."
+            />
+            {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
+          </div>
+
+          {/* Mot de passe */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              name="motDePasse"
+              value={formData.motDePasse}
+              onChange={handleChange}
+              className={`form-input ${errors.motDePasse ? "border-destructive" : ""}`}
+              placeholder="Saisir votre mot de passe .."
+            />
+            {errors.motDePasse && <p className="text-destructive text-sm mt-1">{errors.motDePasse}</p>}
+          </div>
+
+          {/* Confirmer mot de passe */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Confirmer mot de passe
+            </label>
+            <input
+              type="password"
+              name="confirmMotDePasse"
+              value={formData.confirmMotDePasse}
+              onChange={handleChange}
+              className={`form-input ${errors.confirmMotDePasse ? "border-destructive" : ""}`}
+              placeholder="Confirmer votre mot de passe .."
+            />
+            {errors.confirmMotDePasse && <p className="text-destructive text-sm mt-1">{errors.confirmMotDePasse}</p>}
+          </div>
+
+          {/* Date de naissance */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Date de naissance
+            </label>
+            <input
+              type="date"
+              name="dateNaissance"
+              value={formData.dateNaissance}
+              onChange={handleChange}
+              className={`form-input ${errors.dateNaissance ? "border-destructive" : ""}`}
+            />
+            {errors.dateNaissance && <p className="text-destructive text-sm mt-1">{errors.dateNaissance}</p>}
+          </div>
+
+          {/* Diplome */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Diplome
+            </label>
+            <select
+              name="diplome"
+              value={formData.diplome}
+              onChange={handleChange}
+              className={`form-input ${errors.diplome ? "border-destructive" : ""}`}
+            >
+              <option value="">[Choisir]</option>
+              {diplomes.map((diplome) => (
+                <option key={diplome} value={diplome}>
+                  {diplome}
+                </option>
               ))}
+            </select>
+            {errors.diplome && <p className="text-destructive text-sm mt-1">{errors.diplome}</p>}
+          </div>
+
+          {/* Photo */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Photo
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="button"
+                value="Choisir un fichier"
+                className="px-3 py-1.5 border border-gray-400 bg-gray-100 text-sm rounded cursor-pointer hover:bg-gray-200"
+                onClick={() => document.getElementById('photo-upload')?.click()}
+              />
+              <span className="text-sm text-gray-600">
+                {formData.photo ? formData.photo.name : "Aucun fichier choisi"}
+              </span>
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {/* Sexe */}
+          <div className="flex items-center gap-4">
+            <label className="form-label mb-0">Sexe</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sexe"
+                  value="H"
+                  checked={formData.sexe === "H"}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-primary"
+                />
+                <span className="italic">Homme</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sexe"
+                  value="F"
+                  checked={formData.sexe === "F"}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-primary"
+                />
+                <span className="italic">Femme</span>
+              </label>
             </div>
           </div>
         </div>
-      </div>
+
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <button type="submit" className="btn-primary w-full sm:w-auto min-w-[200px]">
+            Enregistrer
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Retour à la connexion
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

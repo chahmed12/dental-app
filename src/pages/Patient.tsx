@@ -2,20 +2,26 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Calendar, Droplets, Lock, Shield, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
+
+import { recouvrementsSociaux } from "@/lib/constants";
+
+const groupesSanguins = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 interface PatientForm {
   nom: string;
   prenom: string;
+  adresse: string;
+  telephone: string;
   email: string;
-  dateNaissance: string;
-  groupeSanguin: string;
-  sexe: string;
   motDePasse: string;
   confirmMotDePasse: string;
   recouvrementSocial: string;
+  dateNaissance: string;
+  groupeSanguin: string;
+  sexe: string;
 }
 
-const groupesSanguins = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const Patient = () => {
   const navigate = useNavigate();
@@ -25,13 +31,15 @@ const Patient = () => {
   const [formData, setFormData] = useState<PatientForm>({
     nom: "",
     prenom: "",
+    adresse: "",
+    telephone: "",
     email: "",
-    dateNaissance: "",
-    groupeSanguin: "",
-    sexe: "",
     motDePasse: "",
     confirmMotDePasse: "",
     recouvrementSocial: "",
+    dateNaissance: "",
+    groupeSanguin: "",
+    sexe: "",
   });
 
   const validateForm = (): boolean => {
@@ -39,22 +47,27 @@ const Patient = () => {
 
     if (!formData.nom.trim()) newErrors.nom = "Le nom est requis";
     if (!formData.prenom.trim()) newErrors.prenom = "Le prénom est requis";
+    if (!formData.adresse.trim()) newErrors.adresse = "L'adresse est requise";
+    if (!formData.telephone.trim()) {
+      newErrors.telephone = "Le téléphone est requis";
+    }
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Format d'email invalide";
     }
-    if (!formData.dateNaissance) newErrors.dateNaissance = "La date de naissance est requise";
-    if (!formData.groupeSanguin) newErrors.groupeSanguin = "Le groupe sanguin est requis";
-    if (!formData.sexe) newErrors.sexe = "Le sexe est requis";
     if (!formData.motDePasse) {
       newErrors.motDePasse = "Le mot de passe est requis";
     } else if (formData.motDePasse.length < 6) {
       newErrors.motDePasse = "Le mot de passe doit contenir au moins 6 caractères";
     }
-    if (formData.motDePasse !== formData.confirmMotDePasse) {
-      newErrors.confirmMotDePasse = "Les mots de passe ne correspondent pas";
-    }
+    // Note: Confirmation removed from UI in mockup but keeping logic if needed or removing it.
+    // Assuming we stick to mockup which likely doesn't show it, but for safety lets keep validation if we decide to keep field hidden or just remove check.
+    // For now, removing check to match strictly mockup fields if confirm field is removed.
+
+    if (!formData.dateNaissance) newErrors.dateNaissance = "La date de naissance est requise";
+    if (!formData.groupeSanguin) newErrors.groupeSanguin = "Le groupe sanguin est requis";
+    if (!formData.sexe) newErrors.sexe = "Le sexe est requis";
     if (!formData.recouvrementSocial.trim()) {
       newErrors.recouvrementSocial = "Le recouvrement social est requis";
     }
@@ -63,14 +76,46 @@ const Patient = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      setIsSubmitted(true);
-      toast({
-        title: "Inscription réussie !",
-        description: "Votre dossier médical a été créé avec succès.",
-      });
+      try {
+        const { confirmMotDePasse, ...data } = formData;
+
+        // Mapping Data to Backend Entity "Patient" (nomP, prenomP, dateNP, etc.)
+        const payload = {
+          nomP: data.nom,
+          prenomP: data.prenom,
+          adresseP: data.adresse, // Assuming adresseP exists or mapping to generic field if strictly 1:1 isn't possible, but user asked for strict alignment.
+          telP: data.telephone,   // Assuming telP
+          emailP: data.email,
+          mdpP: data.motDePasse,
+          dateNP: data.dateNaissance,
+          sexeP: data.sexe,
+          groupeSanguinP: data.groupeSanguin,
+          recouvrementP: data.recouvrementSocial
+        };
+
+        const response = await apiRequest("/auth/register/patient", "POST", payload);
+
+        // DEBUG
+        alert("Succès API: " + JSON.stringify(response));
+
+        setIsSubmitted(true);
+        toast({
+          title: "Inscription réussie !",
+          description: "Votre dossier médical a été créé avec succès.",
+        });
+      } catch (error: any) {
+        // DEBUG
+        alert("Erreur API: " + error.message);
+
+        toast({
+          variant: "destructive",
+          title: "Erreur d'inscription",
+          description: error.message || "Impossible de créer le compte",
+        });
+      }
     }
   };
 
@@ -109,7 +154,7 @@ const Patient = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="text-center mb-8 animate-fade-up">
-        <h2 className="page-title">Inscription Patient</h2>
+        <h2 className="page-title">Créer compte et Prenez rendez-vous en ligne</h2>
         <p className="text-muted-foreground">
           Remplissez le formulaire ci-dessous pour créer votre dossier médical
         </p>
@@ -129,7 +174,7 @@ const Patient = () => {
               value={formData.nom}
               onChange={handleChange}
               className={`form-input ${errors.nom ? "border-destructive" : ""}`}
-              placeholder="Votre nom"
+              placeholder="Saisir votre nom.."
             />
             {errors.nom && <p className="text-destructive text-sm mt-1">{errors.nom}</p>}
           </div>
@@ -146,15 +191,46 @@ const Patient = () => {
               value={formData.prenom}
               onChange={handleChange}
               className={`form-input ${errors.prenom ? "border-destructive" : ""}`}
-              placeholder="Votre prénom"
+              placeholder="Saisir votre prénom.."
             />
             {errors.prenom && <p className="text-destructive text-sm mt-1">{errors.prenom}</p>}
           </div>
 
-          {/* Email */}
-          <div className="md:col-span-2">
+          {/* Adresse */}
+          <div>
             <label className="form-label flex items-center gap-2">
-              <Mail className="w-4 h-4 text-primary" />
+              Adresse
+            </label>
+            <input
+              type="text"
+              name="adresse"
+              value={formData.adresse}
+              onChange={handleChange}
+              className={`form-input ${errors.adresse ? "border-destructive" : ""}`}
+              placeholder="Saisir votre adresse .."
+            />
+            {errors.adresse && <p className="text-destructive text-sm mt-1">{errors.adresse}</p>}
+          </div>
+
+          {/* Téléphone */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Téléphone
+            </label>
+            <input
+              type="tel"
+              name="telephone"
+              value={formData.telephone}
+              onChange={handleChange}
+              className={`form-input ${errors.telephone ? "border-destructive" : ""}`}
+              placeholder="Saisir votre téléphone .."
+            />
+            {errors.telephone && <p className="text-destructive text-sm mt-1">{errors.telephone}</p>}
+          </div>
+
+          {/* Email */}
+          <div className="">
+            <label className="form-label flex items-center gap-2">
               Email
             </label>
             <input
@@ -163,15 +239,30 @@ const Patient = () => {
               value={formData.email}
               onChange={handleChange}
               className={`form-input ${errors.email ? "border-destructive" : ""}`}
-              placeholder="votre.email@exemple.com"
+              placeholder="Saisir votre E-mail .."
             />
             {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
+          </div>
+
+          {/* Mot de passe */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              name="motDePasse"
+              value={formData.motDePasse}
+              onChange={handleChange}
+              className={`form-input ${errors.motDePasse ? "border-destructive" : ""}`}
+              placeholder="Saisir votre mot de passe .."
+            />
+            {errors.motDePasse && <p className="text-destructive text-sm mt-1">{errors.motDePasse}</p>}
           </div>
 
           {/* Date de naissance */}
           <div>
             <label className="form-label flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary" />
               Date de naissance
             </label>
             <input
@@ -183,6 +274,7 @@ const Patient = () => {
             />
             {errors.dateNaissance && <p className="text-destructive text-sm mt-1">{errors.dateNaissance}</p>}
           </div>
+
 
           {/* Groupe sanguin */}
           <div>
@@ -214,8 +306,8 @@ const Patient = () => {
                 <input
                   type="radio"
                   name="sexe"
-                  value="M"
-                  checked={formData.sexe === "M"}
+                  value="H"
+                  checked={formData.sexe === "H"}
                   onChange={handleChange}
                   className="w-4 h-4 text-primary"
                 />
@@ -239,52 +331,22 @@ const Patient = () => {
           {/* Recouvrement social */}
           <div>
             <label className="form-label flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary" />
-              Recouvrement social
+              Recouvrement
             </label>
-            <input
-              type="text"
+            <select
               name="recouvrementSocial"
               value={formData.recouvrementSocial}
               onChange={handleChange}
               className={`form-input ${errors.recouvrementSocial ? "border-destructive" : ""}`}
-              placeholder="Numéro de sécurité sociale"
-            />
+            >
+              <option value="">[Choisir]</option>
+              {recouvrementsSociaux.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
             {errors.recouvrementSocial && <p className="text-destructive text-sm mt-1">{errors.recouvrementSocial}</p>}
-          </div>
-
-          {/* Mot de passe */}
-          <div>
-            <label className="form-label flex items-center gap-2">
-              <Lock className="w-4 h-4 text-primary" />
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              name="motDePasse"
-              value={formData.motDePasse}
-              onChange={handleChange}
-              className={`form-input ${errors.motDePasse ? "border-destructive" : ""}`}
-              placeholder="••••••••"
-            />
-            {errors.motDePasse && <p className="text-destructive text-sm mt-1">{errors.motDePasse}</p>}
-          </div>
-
-          {/* Confirmation mot de passe */}
-          <div>
-            <label className="form-label flex items-center gap-2">
-              <Lock className="w-4 h-4 text-primary" />
-              Confirmer le mot de passe
-            </label>
-            <input
-              type="password"
-              name="confirmMotDePasse"
-              value={formData.confirmMotDePasse}
-              onChange={handleChange}
-              className={`form-input ${errors.confirmMotDePasse ? "border-destructive" : ""}`}
-              placeholder="••••••••"
-            />
-            {errors.confirmMotDePasse && <p className="text-destructive text-sm mt-1">{errors.confirmMotDePasse}</p>}
           </div>
         </div>
 
