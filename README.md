@@ -90,9 +90,4 @@ Assurez-vous que vos entités Java possèdent les champs suivants pour fonctionn
 - `titre`, `resume`, `categorie`, `auteur` (String)
 - `datePublication` (`LocalDate` / `Date`)
 
-## 📝 Auteur
-**Cheikh Ahmed** - *Étudiant ENIT*
-Email : `cheikhahmed.zenvour@etudiant-enit.utm.tn`
 
----
-© 2026 DentalCare
