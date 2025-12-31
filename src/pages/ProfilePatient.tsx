@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react";
-import { User, Mail, Phone, MapPin, Calendar, Droplets, Shield, FileText } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Droplets, Shield, FileText, LogOut, FileSearch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/api";
+
+interface RendezVous {
+    idRv: number;
+    dateRv: string;
+    heureRv: string;
+    statutRv: string;
+    detailsRv: string;
+    dentiste?: {
+        nomD: string;
+        prenomD: string;
+        specialiteD: string;
+    };
+    patient?: {
+        idP: number;
+    };
+}
 
 interface PatientData {
     nom: string;
@@ -16,36 +34,75 @@ interface PatientData {
 
 const ProfilePatient = () => {
     const navigate = useNavigate();
+    const { logout, patientId } = useAuth();
     const [patient, setPatient] = useState<PatientData | null>(null);
+    const [appointments, setAppointments] = useState<RendezVous[]>([]);
 
     useEffect(() => {
-        // Retrieve user data from localStorage
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            try {
-                const parsedUser = JSON.parse(storedUser);
-                // Map backend fields to frontend interface if needed, or stick to what's stored
-                // Backend response usually has: nom, prenom, email, etc.
-                // Let's assume the stored object has compatible fields or map them
-                setPatient({
-                    nom: parsedUser.nom || parsedUser.nomP || "",
-                    prenom: parsedUser.prenom || parsedUser.prenomP || "",
-                    email: parsedUser.email || parsedUser.emailP || "",
-                    tel: parsedUser.tel || parsedUser.telP || "Non renseigné",
-                    adresse: parsedUser.adresse || parsedUser.adresseP || "Non renseignée",
-                    dateNaissance: parsedUser.dateN || parsedUser.dateNP || "Non renseignée",
-                    groupeSanguin: parsedUser.groupeSanguin || parsedUser.groupeSanguinP || "Non renseigné",
-                    recouvrementSocial: parsedUser.recouvrement || parsedUser.recouvrementP || "Non renseigné",
-                    sexe: parsedUser.sexe || parsedUser.sexeP || "Non renseigné",
-                });
-            } catch (e) {
-                console.error("Error parsing user data", e);
-            }
-        } else {
-            // Redirect to login if no user found (optional, but good practice)
-            // navigate("/");
+        // Fetch appointments
+        if (patientId) {
+            const fetchAppointments = async () => {
+                try {
+                    // Note: Ideally backend should support /rendezvous/patient/{id}
+                    // For now, fetching all and filtering (assuming small dataset or temporary solution)
+                    const data = await apiRequest<RendezVous[]>("/rendezvous", "GET");
+                    if (Array.isArray(data)) {
+                        const myAppointments = data.filter(rv => rv.patient?.idP === patientId);
+                        setAppointments(myAppointments);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch appointments", error);
+                }
+            };
+            fetchAppointments();
         }
-    }, [navigate]);
+    }, [patientId]);
+
+    useEffect(() => {
+        // Retrieve user data from localStorage for basic info, but preferably fetch fresh data
+        if (patientId) {
+            const fetchPatientDetails = async () => {
+                try {
+                    // Fetch full details from backend
+                    const data = await apiRequest<any>(`/patients/${patientId}`, "GET");
+                    console.log("📥 Patient details received:", data);
+
+                    if (data) {
+                        setPatient({
+                            nom: data.nom || data.nomP || "",
+                            prenom: data.prenom || data.prenomP || "",
+                            email: data.email || data.emailP || "",
+                            tel: data.tel || data.telP || data.telephone || data.telephoneP || "Non renseigné",
+                            adresse: data.adresse || data.adresseP || "Non renseignée",
+                            dateNaissance: data.dateNaissance || data.dateN || data.dateNP || "Non renseignée",
+                            groupeSanguin: data.groupeSanguin || data.groupeSanguinP || data.groupSanguinP || data.groupe_sanguin || "Non renseigné",
+                            recouvrementSocial: data.recouvrementSocial || data.recouvrement || data.recouvrementP || "Non renseigné",
+                            sexe: data.sexe || data.sexeP || "Non renseigné",
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch patient details", error);
+                    // Fallback to localStorage if API fails
+                    const storedUser = localStorage.getItem("user");
+                    if (storedUser) {
+                        const parsedUser = JSON.parse(storedUser);
+                        setPatient({
+                            nom: parsedUser.nom || parsedUser.nomP || "",
+                            prenom: parsedUser.prenom || parsedUser.prenomP || "",
+                            email: parsedUser.email || parsedUser.emailP || "",
+                            tel: parsedUser.tel || parsedUser.telP || "Non renseigné",
+                            adresse: parsedUser.adresse || parsedUser.adresseP || "Non renseignée",
+                            dateNaissance: parsedUser.dateN || parsedUser.dateNP || "Non renseignée",
+                            groupeSanguin: parsedUser.groupeSanguin || parsedUser.groupeSanguinP || "Non renseigné",
+                            recouvrementSocial: parsedUser.recouvrement || parsedUser.recouvrementP || "Non renseigné",
+                            sexe: parsedUser.sexe || parsedUser.sexeP || "Non renseigné",
+                        });
+                    }
+                }
+            };
+            fetchPatientDetails();
+        }
+    }, [patientId, navigate]);
 
     if (!patient) {
         return (
@@ -61,15 +118,27 @@ const ProfilePatient = () => {
     return (
         <div className="max-w-4xl mx-auto animate-fade-up">
             <div className="text-center mb-8">
-                <div className="w-24 h-24 rounded-full hero-gradient flex items-center justify-center mx-auto mb-4">
+                <div className="w-24 h-24 rounded-full hero-gradient flex items-center justify-center mx-auto mb-4 relative group cursor-pointer transition-transform hover:scale-105">
                     <span className="text-3xl font-bold text-primary-foreground">
                         {patient.prenom[0]}{patient.nom[0]}
                     </span>
+                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
+                        logout();
+                        navigate("/");
+                    }}>
+                        <LogOut className="w-8 h-8 text-white" />
+                    </div>
                 </div>
                 <h2 className="page-title">Mon Dossier Médical</h2>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mb-4">
                     Consultez vos informations personnelles et médicales
                 </p>
+                <div className="flex justify-center gap-4">
+                    <button onClick={() => { logout(); navigate("/"); }} className="btn-secondary text-sm px-4 py-1 flex items-center gap-2">
+                        <LogOut className="w-4 h-4" /> Déconnexion
+                    </button>
+                    {/* Just verifying other buttons if needed */}
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -181,10 +250,40 @@ const ProfilePatient = () => {
                         </button>
                     </div>
 
-                    <div className="text-center py-8 bg-secondary/30 rounded-lg border border-border border-dashed">
-                        <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-                        <p className="text-muted-foreground font-medium">0 rendez-vous récents</p>
-                        <p className="text-sm text-muted-foreground/70">Vous n'avez aucun rendez-vous planifié pour le moment.</p>
+                    <div className="space-y-4">
+                        {appointments.length === 0 ? (
+                            <div className="text-center py-8 bg-secondary/30 rounded-lg border border-border border-dashed">
+                                <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                                <p className="text-muted-foreground font-medium">0 rendez-vous récents</p>
+                                <p className="text-sm text-muted-foreground/70">Vous n'avez aucun rendez-vous planifié pour le moment.</p>
+                            </div>
+                        ) : (
+                            appointments.map((rv) => (
+                                <div key={rv.idRv} className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center text-primary font-bold">
+                                            {new Date(rv.dateRv).getDate()}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-foreground">Dr. {rv.dentiste?.nomD} {rv.dentiste?.prenomD}</p>
+                                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                                <Calendar className="w-3 h-3" /> {new Date(rv.dateRv).toLocaleDateString()}
+                                                <span className="text-gray-300">|</span>
+                                                <span className="flex items-center gap-1"><User className="w-3 h-3" /> {rv.heureRv}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${rv.statutRv === 'CONFIRMÉ' ? 'bg-green-100 text-green-700' :
+                                            rv.statutRv === 'ANNULÉ' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                            {rv.statutRv}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

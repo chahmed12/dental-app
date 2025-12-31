@@ -8,7 +8,6 @@ const navItems = [
   { path: "/aide-soignant", label: "Aide-soignant" },
   { path: "/services", label: "Service" },
   { path: "/publications", label: "Publication" },
-  { path: "/rendez-vous", label: "Rendez-vous" },
 ];
 
 const Header = () => {

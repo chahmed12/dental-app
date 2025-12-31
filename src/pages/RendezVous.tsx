@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Clock, User, FileText, CheckCircle, Lock, ArrowRight, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "@/lib/api";
 
@@ -11,12 +12,8 @@ interface Dentiste {
   specialiteD: string;
 }
 
-const dentistes: Dentiste[] = [
-  { idD: 1, nomD: "Bernard", prenomD: "Laurent", specialiteD: "Chirurgie dentaire" },
-  { idD: 2, nomD: "Moreau", prenomD: "Claire", specialiteD: "Orthodontie" },
-  { idD: 3, nomD: "Dubois", prenomD: "Marie", specialiteD: "Pédodontie" },
-  { idD: 4, nomD: "Lefebvre", prenomD: "Jean", specialiteD: "Implantologie" },
-];
+// Dentistes will be fetched from API
+
 
 // Removed: import { typesService } from "@/lib/constants"; 
 // We will fetch services dynamically now.
@@ -26,28 +23,37 @@ const heuresDisponibles = [
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
 ];
 
+interface ServiceMedical {
+  numSM: number;
+  nomSM: string;
+  tarifSM: number;
+}
+
+interface ActeMedical {
+  serviceMedical: {
+    numSM: number;
+    nomSM: string;
+    tarifSM: number;
+  };
+  tarifAM: number; // Prix réellement facturé
+  descriptionAM: string; // Description spécifique de l'acte
+}
+
 interface RendezVousForm {
   idD: string;
   dateRv: string;
   heureRv: string;
-  detailsRv: string; // Changed from descriptionRv to detailsRv
-  statutRv: string; // Added from backend
-  actes: ServiceMedical[]; // Renamed from services to actes (list of ActeMedical)
-}
-
-interface ServiceMedical {
-  numSM: number; // or string depending on backend
-  nomSM: string;
-  tarifSM: number;
+  detailsRv: string;
+  statutRv: string;
+  actes: ActeMedical[]; // Liste des ActeMedical
 }
 
 const RendezVous = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isLoggedIn, patientId } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [dentistes, setDentistes] = useState<Dentiste[]>([]);
 
   const [errors, setErrors] = useState<Partial<RendezVousForm>>({});
   const [formData, setFormData] = useState<RendezVousForm>({
@@ -56,7 +62,7 @@ const RendezVous = () => {
     heureRv: "",
     detailsRv: "",
     statutRv: "CONFIRMÉ",
-    servicesSelectionnes: [],
+    actes: [],
   });
 
   // States for Service Selection
@@ -65,40 +71,29 @@ const RendezVous = () => {
   const [selectedServiceToRemove, setSelectedServiceToRemove] = useState<string>("");
 
   // Fetch Services from API
+  // Fetch Services and Dentists from API
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const response = await apiRequest<ServiceMedical[]>("/services", "GET");
-        if (response && Array.isArray(response)) {
-          setAvailableServices(response);
+        const [servicesRes, dentistesRes] = await Promise.all([
+          apiRequest<ServiceMedical[]>("/services", "GET"),
+          apiRequest<Dentiste[]>("/dentistes", "GET")
+        ]);
+
+        if (servicesRes && Array.isArray(servicesRes)) {
+          setAvailableServices(servicesRes);
+        }
+
+        if (dentistesRes && Array.isArray(dentistesRes)) {
+          setDentistes(dentistesRes);
         }
       } catch (error) {
-        console.error("Failed to fetch services", error);
-        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les services" });
+        console.error("Failed to fetch data", error);
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de charger les données" });
       }
     };
-    fetchServices();
+    fetchData();
   }, [toast]);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const userStr = localStorage.getItem("user");
-      if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          if (userData && userData.isLoggedIn) {
-            setIsLoggedIn(true);
-            setUser(userData);
-          }
-        } catch (e) {
-          console.error("Error parsing user data", e);
-        }
-      }
-      setCheckingAuth(false);
-    };
-
-    checkAuth();
-  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<RendezVousForm> = {};
@@ -119,31 +114,37 @@ const RendezVous = () => {
 
     if (!isLoggedIn) {
       toast({
-        title: "Inscription requise",
-        description: "Veuillez créer un compte pour confirmer votre rendez-vous.",
+        title: "Connexion requise",
+        description: "Veuillez vous connecter pour confirmer votre rendez-vous.",
       });
-      navigate("/patient");
+      navigate("/");
       return;
     }
 
     if (validateForm()) {
       try {
-        // Construct Payload for Backend
-        // Rendezvous fields
-        // ActeMedical entries will be created from servicesSelectionnes
-
+        // Construct Payload for Backend with ActeMedical objects
         const payload = {
-          idP: user?.id || 1,
-          idD: formData.idD,
           dateRv: formData.dateRv,
           heureRv: formData.heureRv,
-          detailsRv: formData.detailsRv,
           statutRv: formData.statutRv,
-          // Les services sélectionnés créeront des ActeMedical
-          servicesIds: formData.servicesSelectionnes.map(s => s.numSM)
+          detailsRv: formData.detailsRv,
+          patient: {
+            idP: patientId || user?.id,
+          },
+          dentiste: {
+            idD: parseInt(formData.idD),
+          },
+          actes: formData.actes.map(acte => ({
+            serviceMedical: { numSM: acte.serviceMedical.numSM },
+            tarifAM: acte.tarifAM,
+            descriptionAM: acte.descriptionAM
+          }))
         };
 
         console.log('📤 Sending payload:', payload);
+
+        await apiRequest("/rendezvous", "POST", payload);
 
         setIsSubmitted(true);
         toast({
@@ -172,10 +173,16 @@ const RendezVous = () => {
   const handleAddService = () => {
     const serviceToAdd = availableServices.find(s => s.numSM.toString() === selectedServiceToAdd);
 
-    if (serviceToAdd && !formData.servicesSelectionnes.find(s => s.numSM === serviceToAdd.numSM)) {
+    if (serviceToAdd && !formData.actes.find(a => a.serviceMedical.numSM === serviceToAdd.numSM)) {
+      const newActe: ActeMedical = {
+        serviceMedical: serviceToAdd,
+        tarifAM: serviceToAdd.tarifSM, // Initialize with standard price
+        descriptionAM: "", // Empty description
+      };
+
       setFormData(prev => ({
         ...prev,
-        servicesSelectionnes: [...prev.servicesSelectionnes, serviceToAdd]
+        actes: [...prev.actes, newActe]
       }));
       setAvailableServices(prev => prev.filter(s => s.numSM !== serviceToAdd.numSM));
       setSelectedServiceToAdd("");
@@ -183,23 +190,42 @@ const RendezVous = () => {
   };
 
   const handleRemoveService = () => {
-    const serviceToRemove = formData.servicesSelectionnes.find(s => s.numSM.toString() === selectedServiceToRemove);
+    const acteToRemove = formData.actes.find(a => a.serviceMedical.numSM.toString() === selectedServiceToRemove);
 
-    if (serviceToRemove) {
+    if (acteToRemove) {
+      const serviceToAdd = acteToRemove.serviceMedical;
       setFormData(prev => ({
         ...prev,
-        servicesSelectionnes: prev.servicesSelectionnes.filter(s => s.numSM !== serviceToRemove.numSM)
+        actes: prev.actes.filter(a => a.serviceMedical.numSM !== acteToRemove.serviceMedical.numSM)
       }));
-      setAvailableServices(prev => [...prev, serviceToRemove].sort((a, b) => a.numSM - b.numSM));
+      setAvailableServices(prev => [...prev, serviceToAdd].sort((a, b) => a.numSM - b.numSM));
       setSelectedServiceToRemove("");
     }
   };
 
-  const selectedDentiste = dentistes.find((d) => d.idD.toString() === formData.idD);
+  const handleUpdateActeTarif = (numSM: number, newTarif: number) => {
+    setFormData(prev => ({
+      ...prev,
+      actes: prev.actes.map(acte =>
+        acte.serviceMedical.numSM === numSM
+          ? { ...acte, tarifAM: newTarif }
+          : acte
+      )
+    }));
+  };
 
-  if (checkingAuth) {
-    return <div className="p-8 text-center">Chargement...</div>;
-  }
+  const handleUpdateActeDescription = (numSM: number, newDescription: string) => {
+    setFormData(prev => ({
+      ...prev,
+      actes: prev.actes.map(acte =>
+        acte.serviceMedical.numSM === numSM
+          ? { ...acte, descriptionAM: newDescription }
+          : acte
+      )
+    }));
+  };
+
+  const selectedDentiste = dentistes.find((d) => d.idD.toString() === formData.idD);
 
   // if (!isLoggedIn) check removed to allow guest access until submission
 
@@ -325,20 +351,70 @@ const RendezVous = () => {
                 onChange={(e) => setSelectedServiceToRemove(e.target.value)}
               >
                 <option value="">[Choisir pour retirer]</option>
-                {formData.servicesSelectionnes.map(s => <option key={s.numSM} value={s.numSM}>{s.nomSM}</option>)}
+                {formData.actes.map(a => <option key={a.serviceMedical.numSM} value={a.serviceMedical.numSM}>{a.serviceMedical.nomSM}</option>)}
               </select>
             </div>
           </div>
+
+          {/* Détails des ActeMedical sélectionnés */}
+          {formData.actes.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-300">
+              <h4 className="text-lg font-semibold text-blue-700 mb-4">Détails des actes médicaux:</h4>
+              <div className="space-y-4">
+                {formData.actes.map((acte) => (
+                  <div key={acte.serviceMedical.numSM} className="bg-blue-50 border border-blue-200 rounded p-4">
+                    <div className="mb-3">
+                      <h5 className="font-semibold text-blue-900">{acte.serviceMedical.nomSM}</h5>
+                      <p className="text-sm text-gray-600">Tarif standard: {acte.serviceMedical.tarifSM} DT</p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 mb-1">Tarif facturé (tarifAM)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={acte.tarifAM}
+                          onChange={(e) => handleUpdateActeTarif(acte.serviceMedical.numSM, parseFloat(e.target.value))}
+                          className="form-input bg-white border-blue-200 w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 mb-1">Description (descriptionAM)</label>
+                        <input
+                          type="text"
+                          value={acte.descriptionAM}
+                          onChange={(e) => handleUpdateActeDescription(acte.serviceMedical.numSM, e.target.value)}
+                          placeholder="Ex: Détartrage difficile, gencives sensibles"
+                          className="form-input bg-white border-blue-200 w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Hidden Dentist Selector (keeping for ID logic but hidden or minimized as per user request to follow image) */}
-        <div className="mb-6 invisible h-0 overflow-hidden">
-          <select name="idD" value={formData.idD} onChange={handleChange}>
-            <option value="">Select Dentist</option>
-            {dentistes.map((dentiste) => (
-              <option key={dentiste.idD} value={dentiste.idD}> {dentiste.nomD} </option>
-            ))}
-          </select>
+        {/* Dentist Selector */}
+        <div className="mb-6">
+          <label className="form-label text-blue-800 font-semibold mb-2 block text-center">Choix du dentiste</label>
+          <div className="relative max-w-md mx-auto">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
+            <select
+              name="idD"
+              value={formData.idD}
+              onChange={handleChange}
+              className={`form-input pl-10 bg-cyan-50 border-cyan-100 ${errors.idD ? "border-destructive" : ""}`}
+            >
+              <option value="">-- Sélectionner un dentiste --</option>
+              {dentistes.map((dentiste) => (
+                <option key={dentiste.idD} value={dentiste.idD}> Dr. {dentiste.nomD} {dentiste.prenomD} ({dentiste.specialiteD}) </option>
+              ))}
+            </select>
+          </div>
+          {errors.idD && <p className="text-destructive text-sm mt-1 text-center">{errors.idD}</p>}
         </div>
 
         {/* Details */}

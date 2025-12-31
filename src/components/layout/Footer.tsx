@@ -8,21 +8,16 @@ const Footer = () => {
           <div className="flex items-center gap-2 animate-slide-horizontal">
             <Mail className="w-5 h-5 text-primary" />
             <a
-              href="mailto:developer@dentalcare.com"
+              href="mailto:cheikhahmed.zenvour@etudiant-enit.utm.tn"
               className="hover:text-primary transition-colors"
             >
-              developer@dentalcare.com
+              cheikhahmed.zenvour@etudiant-enit.utm.tn
             </a>
           </div>
-          <span className="hidden md:block">•</span>
-          <div className="flex items-center gap-2 text-sm">
-            <span>Développé avec</span>
-            <Heart className="w-4 h-4 text-primary animate-pulse-soft" />
-            <span>en React + Vite</span>
-          </div>
+
         </div>
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © 2024 DentalCare - Plateforme de rendez-vous dentaires
+          © 2026 DentalCare - Plateforme de rendez-vous dentaires
         </p>
       </div>
     </footer>

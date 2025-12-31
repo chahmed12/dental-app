@@ -92,7 +92,7 @@ const Patient = () => {
           mdpP: data.motDePasse,
           dateNP: data.dateNaissance,
           sexeP: data.sexe,
-          groupeSanguinP: data.groupeSanguin,
+          groupSanguinP: data.groupeSanguin,
           recouvrementP: data.recouvrementSocial
         };
 

@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Calendar, Upload, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { categoriesPublication } from "@/lib/constants";
+import { apiRequest } from "@/lib/api";
 
 interface PublicationFormState {
     titre: string;
@@ -16,6 +18,7 @@ interface PublicationFormState {
 const PublicationForm = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [formData, setFormData] = useState<PublicationFormState>({
         titre: "",
         date: new Date().toISOString().split("T")[0],
@@ -36,7 +39,7 @@ const PublicationForm = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.titre || !formData.date || !formData.categorie || !formData.resume) {
             toast({
@@ -47,27 +50,32 @@ const PublicationForm = () => {
             return;
         }
 
-        // Mock saving to localStorage to simulate backend persistence
-        const newPublication = {
-            id: Date.now(),
-            titre: formData.titre,
-            extrait: formData.resume,
-            date: formData.date,
-            auteur: "Aide-Soignant (Moi)", // Static for now or fetch from user session
-            categorie: formData.categorie,
-            // files would be uploaded to backend in real app
-        };
+        try {
+            const payload = {
+                titre: formData.titre,
+                resume: formData.resume,
+                datePublication: formData.date,
+                categorie: formData.categorie,
+                auteur: user ? `Dr. ${user.nom} ${user.prenom}` : "Cabinet Dentaire",
+                // photo/fichier handling depends on backend capability (multipart vs base64 vs omitted)
+                // For now, sending text data as per basic entity
+            };
 
-        const existingPubs = localStorage.getItem("publications");
-        const pubs = existingPubs ? JSON.parse(existingPubs) : [];
-        localStorage.setItem("publications", JSON.stringify([newPublication, ...pubs]));
+            await apiRequest("/publications", "POST", payload);
 
-        toast({
-            title: "Publication créée !",
-            description: "Votre article a été publié avec succès.",
-        });
+            toast({
+                title: "Publication créée !",
+                description: "Votre article a été publié avec succès.",
+            });
 
-        navigate("/publications");
+            navigate("/publications");
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Erreur",
+                description: "Erreur lors de la création de la publication.",
+            });
+        }
     };
 
     return (
