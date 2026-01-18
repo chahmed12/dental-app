@@ -60,10 +60,15 @@ const Patient = () => {
       newErrors.motDePasse = "Le mot de passe est requis";
     } else if (formData.motDePasse.length < 6) {
       newErrors.motDePasse = "Le mot de passe doit contenir au moins 6 caractères";
+    } else if (formData.motDePasse.length < 6) {
+      newErrors.motDePasse = "Le mot de passe doit contenir au moins 6 caractères";
     }
-    // Note: Confirmation removed from UI in mockup but keeping logic if needed or removing it.
-    // Assuming we stick to mockup which likely doesn't show it, but for safety lets keep validation if we decide to keep field hidden or just remove check.
-    // For now, removing check to match strictly mockup fields if confirm field is removed.
+
+    if (!formData.confirmMotDePasse) {
+      newErrors.confirmMotDePasse = "Veuillez confirmer le mot de passe";
+    } else if (formData.motDePasse !== formData.confirmMotDePasse) {
+      newErrors.confirmMotDePasse = "Les mots de passe ne correspondent pas";
+    }
 
     if (!formData.dateNaissance) newErrors.dateNaissance = "La date de naissance est requise";
     if (!formData.groupeSanguin) newErrors.groupeSanguin = "Le groupe sanguin est requis";
@@ -258,6 +263,22 @@ const Patient = () => {
               placeholder="Saisir votre mot de passe .."
             />
             {errors.motDePasse && <p className="text-destructive text-sm mt-1">{errors.motDePasse}</p>}
+          </div>
+
+          {/* Confirmer Mot de passe */}
+          <div>
+            <label className="form-label flex items-center gap-2">
+              Confirmer mot de passe
+            </label>
+            <input
+              type="password"
+              name="confirmMotDePasse"
+              value={formData.confirmMotDePasse}
+              onChange={handleChange}
+              className={`form-input ${errors.confirmMotDePasse ? "border-destructive" : ""}`}
+              placeholder="Confirmer votre mot de passe .."
+            />
+            {errors.confirmMotDePasse && <p className="text-destructive text-sm mt-1">{errors.confirmMotDePasse}</p>}
           </div>
 
           {/* Date de naissance */}

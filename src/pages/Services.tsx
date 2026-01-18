@@ -122,7 +122,7 @@ const Services = () => {
       )}
 
       <div className="flex justify-center mt-12">
-        <button onClick={() => navigate("/rendez-vous")} className="btn-primary">
+        <button onClick={() => navigate("/")} className="btn-primary">
           Prendre un rendez-vous
         </button>
       </div>

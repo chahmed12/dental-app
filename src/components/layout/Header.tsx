@@ -1,9 +1,9 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Stethoscope, Menu, X, User } from "lucide-react";
+import { NavLink, useLocation, useNavigate, Link } from "react-router-dom";
+import { Stethoscope, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const navItems = [
-  { path: "/", label: "Connexion" },
+  { path: "/", label: "Accueille" },
   { path: "/patient", label: "Patient" },
   { path: "/aide-soignant", label: "Aide-soignant" },
   { path: "/services", label: "Service" },
@@ -38,25 +38,24 @@ const Header = () => {
     };
 
     checkUser();
-    // Listen for storage events (though this only works across tabs, inside same tab we might need a custom event or context)
-    // For simplicity, we just check on mount and location change (as login redirects)
     window.addEventListener("storage", checkUser);
     return () => window.removeEventListener("storage", checkUser);
   }, [location]);
 
   return (
-    <header className="bg-card border-b border-border sticky top-0 z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-12 h-12 rounded-full hero-gradient flex items-center justify-center">
-              <Stethoscope className="w-6 h-6 text-primary-foreground" />
+    <header className="fixed w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
+      <div className="container mx-auto px-4 md:px-6">
+        <div className="flex items-center justify-between h-20">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="bg-primary/10 p-2 rounded-full group-hover:bg-primary/20 transition-colors">
+              <Stethoscope className="w-6 h-6 text-primary" />
             </div>
-            <span className="text-xl font-bold text-foreground hidden sm:block">DentalCare</span>
-          </div>
+            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
+              SmileClinic
+            </span>
+          </Link>
 
-          {/* Title */}
+          {/* Title - Hidden on small screens to save space */}
           <h1 className="hidden lg:block text-lg xl:text-xl font-display text-center text-foreground max-w-xl">
             Un sourire en un clic : simplifiez vos rendez-vous dentaires !
           </h1>
@@ -67,7 +66,7 @@ const Header = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`nav-link text-sm ${location.pathname === item.path ? "active text-primary" : ""
+                className={`nav-link text-sm ${location.pathname === item.path ? "active text-primary font-semibold" : "text-foreground/80 hover:text-primary"
                   }`}
               >
                 {item.label}
@@ -88,7 +87,7 @@ const Header = () => {
           </button>
         </div>
 
-        {/* Mobile Title */}
+        {/* Mobile Title - Visible only on mobile */}
         <h1 className="lg:hidden text-center text-sm font-display text-muted-foreground pb-3">
           Un sourire en un clic : simplifiez vos rendez-vous dentaires !
         </h1>

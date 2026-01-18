@@ -82,7 +82,7 @@ const PublicationForm = () => {
         <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8 animate-fade-up">
                 <h2 className="page-title">Nouvelle Publication</h2>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-lg">
                     Rédigez un nouvel article pour informer vos patients
                 </p>
             </div>
@@ -91,27 +91,26 @@ const PublicationForm = () => {
                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                     {/* Titre */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">Titre</label>
+                        <label className="form-label text-center">Titre</label>
                         <input
                             type="text"
                             name="titre"
                             value={formData.titre}
                             onChange={handleChange}
-                            className="form-input bg-cyan-50 border-cyan-100 text-center"
-                            placeholder="Saisir le titre de publication .."
+                            className="form-input text-center"
+                            placeholder="Saisir le titre..."
                         />
                     </div>
 
                     {/* Date */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">date de publication</label>
+                        <label className="form-label text-center">Date de publication</label>
                         <input
                             type="date"
                             name="date"
                             value={formData.date}
                             onChange={handleChange}
-                            className="form-input bg-cyan-50 border-cyan-100 text-center"
-                            placeholder="jj/mm/aaaa"
+                            className="form-input text-center"
                         />
                     </div>
                 </div>
@@ -119,17 +118,18 @@ const PublicationForm = () => {
                 <div className="grid md:grid-cols-2 gap-6 mb-6">
                     {/* Fichier */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">Fichier</label>
-                        <div className="bg-cyan-50 border border-cyan-100 rounded p-2 flex items-center justify-between">
-                            <input
-                                type="button"
-                                value="Choisir un fichier"
-                                className="px-3 py-1 bg-gray-100 border border-gray-300 text-sm rounded cursor-pointer hover:bg-gray-200"
-                                onClick={() => document.getElementById('fichier-upload')?.click()}
-                            />
-                            <span className="text-sm text-blue-500 truncate ml-2">
-                                {formData.fichier ? formData.fichier.name : "Aucun fichier choisi"}
-                            </span>
+                        <label className="form-label text-center">Fichier</label>
+                        <div
+                            className="form-input flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => document.getElementById('fichier-upload')?.click()}
+                        >
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <FileText className="w-4 h-4" />
+                                <span className="text-sm truncate max-w-[150px]">
+                                    {formData.fichier ? formData.fichier.name : "Choisir un fichier"}
+                                </span>
+                            </div>
+                            <span className="text-xs bg-secondary px-2 py-1 rounded text-secondary-foreground font-medium">Parcourir</span>
                             <input
                                 id="fichier-upload"
                                 type="file"
@@ -141,17 +141,18 @@ const PublicationForm = () => {
 
                     {/* Affiche */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">Affiche</label>
-                        <div className="bg-cyan-50 border border-cyan-100 rounded p-2 flex items-center justify-between">
-                            <input
-                                type="button"
-                                value="Choisir un fichier"
-                                className="px-3 py-1 bg-gray-100 border border-gray-300 text-sm rounded cursor-pointer hover:bg-gray-200"
-                                onClick={() => document.getElementById('affiche-upload')?.click()}
-                            />
-                            <span className="text-sm text-blue-500 truncate ml-2">
-                                {formData.affiche ? formData.affiche.name : "Aucun fichier choisi"}
-                            </span>
+                        <label className="form-label text-center">Image de couverture</label>
+                        <div
+                            className="form-input flex items-center justify-between cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => document.getElementById('affiche-upload')?.click()}
+                        >
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <ImageIcon className="w-4 h-4" />
+                                <span className="text-sm truncate max-w-[150px]">
+                                    {formData.affiche ? formData.affiche.name : "Choisir une image"}
+                                </span>
+                            </div>
+                            <span className="text-xs bg-secondary px-2 py-1 rounded text-secondary-foreground font-medium">Parcourir</span>
                             <input
                                 id="affiche-upload"
                                 type="file"
@@ -166,39 +167,46 @@ const PublicationForm = () => {
                 <div className="grid md:grid-cols-2 gap-6 mb-8">
                     {/* Type de publication */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">Type de publication</label>
-                        <select
-                            name="categorie"
-                            value={formData.categorie}
-                            onChange={handleChange}
-                            className="form-input bg-cyan-50 border-cyan-100 text-center"
-                        >
-                            <option value="">[Choisir catégorie]</option>
-                            {categoriesPublication.map((cat) => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
+                        <label className="form-label text-center">Catégorie</label>
+                        <div className="relative">
+                            <select
+                                name="categorie"
+                                value={formData.categorie}
+                                onChange={handleChange}
+                                className="form-input text-center appearance-none"
+                            >
+                                <option value="">-- Sélectionner une catégorie --</option>
+                                {categoriesPublication.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     {/* Résumé */}
                     <div>
-                        <label className="form-label text-blue-900 font-semibold mb-2 block text-center">Résumé</label>
+                        <label className="form-label text-center">Résumé</label>
                         <textarea
                             name="resume"
                             value={formData.resume}
                             onChange={handleChange}
                             rows={4}
-                            className="form-input bg-cyan-50 border-cyan-100 resize-none"
-                            placeholder="Saisir la description associée .."
+                            className="form-input resize-none"
+                            placeholder="Bref résumé de la publication..."
                         />
                     </div>
                 </div>
 
-                <div className="flex justify-center gap-4">
-                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded text-lg transition-colors min-w-[200px]">
-                        Enregistrer
+                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4 border-t border-border">
+                    <button type="submit" className="btn-primary min-w-[200px] flex items-center justify-center gap-2">
+                        <Upload className="w-5 h-5" />
+                        Publier
                     </button>
-                    <button type="button" onClick={() => navigate("/profile-aide-soignant")} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded text-lg transition-colors min-w-[200px]">
+                    <button
+                        type="button"
+                        onClick={() => navigate("/profile-aide-soignant")}
+                        className="btn-secondary min-w-[200px]"
+                    >
                         Annuler
                     </button>
                 </div>

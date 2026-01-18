@@ -69,15 +69,15 @@ const ProfilePatient = () => {
 
                     if (data) {
                         setPatient({
-                            nom: data.nom || data.nomP || "",
-                            prenom: data.prenom || data.prenomP || "",
-                            email: data.email || data.emailP || "",
-                            tel: data.tel || data.telP || data.telephone || data.telephoneP || "Non renseigné",
-                            adresse: data.adresse || data.adresseP || "Non renseignée",
-                            dateNaissance: data.dateNaissance || data.dateN || data.dateNP || "Non renseignée",
-                            groupeSanguin: data.groupeSanguin || data.groupeSanguinP || data.groupSanguinP || data.groupe_sanguin || "Non renseigné",
-                            recouvrementSocial: data.recouvrementSocial || data.recouvrement || data.recouvrementP || "Non renseigné",
-                            sexe: data.sexe || data.sexeP || "Non renseigné",
+                            nom: data.nomP || data.nom || "",
+                            prenom: data.prenomP || data.prenom || "",
+                            email: data.emailP || data.email || "",
+                            tel: data.telP || data.telephone || "Non renseigné",
+                            adresse: data.adresseP || data.adresse || "Non renseignée",
+                            dateNaissance: data.dateNP || data.dateNaissance || "Non renseignée",
+                            groupeSanguin: data.groupSanguinP || data.groupeSanguin || "Non renseigné",
+                            recouvrementSocial: data.recouvrementP || data.recouvrementSocial || "Non renseigné",
+                            sexe: data.sexeP || data.sexe || "Non renseigné",
                         });
                     }
                 } catch (error) {
@@ -87,15 +87,15 @@ const ProfilePatient = () => {
                     if (storedUser) {
                         const parsedUser = JSON.parse(storedUser);
                         setPatient({
-                            nom: parsedUser.nom || parsedUser.nomP || "",
-                            prenom: parsedUser.prenom || parsedUser.prenomP || "",
-                            email: parsedUser.email || parsedUser.emailP || "",
-                            tel: parsedUser.tel || parsedUser.telP || "Non renseigné",
-                            adresse: parsedUser.adresse || parsedUser.adresseP || "Non renseignée",
-                            dateNaissance: parsedUser.dateN || parsedUser.dateNP || "Non renseignée",
-                            groupeSanguin: parsedUser.groupeSanguin || parsedUser.groupeSanguinP || "Non renseigné",
-                            recouvrementSocial: parsedUser.recouvrement || parsedUser.recouvrementP || "Non renseigné",
-                            sexe: parsedUser.sexe || parsedUser.sexeP || "Non renseigné",
+                            nom: parsedUser.nomP || parsedUser.nom || "",
+                            prenom: parsedUser.prenomP || parsedUser.prenom || "",
+                            email: parsedUser.emailP || parsedUser.email || "",
+                            tel: parsedUser.telP || parsedUser.telephone || "Non renseigné",
+                            adresse: parsedUser.adresseP || parsedUser.adresse || "Non renseignée",
+                            dateNaissance: parsedUser.dateNP || parsedUser.dateNaissance || "Non renseignée",
+                            groupeSanguin: parsedUser.groupSanguinP || parsedUser.groupeSanguin || "Non renseigné",
+                            recouvrementSocial: parsedUser.recouvrementP || parsedUser.recouvrementSocial || "Non renseigné",
+                            sexe: parsedUser.sexeP || parsedUser.sexe || "Non renseigné",
                         });
                     }
                 }
@@ -276,7 +276,8 @@ const ProfilePatient = () => {
                                     <div>
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${rv.statutRv === 'CONFIRMÉ' ? 'bg-green-100 text-green-700' :
                                             rv.statutRv === 'ANNULÉ' ? 'bg-red-100 text-red-700' :
-                                                'bg-yellow-100 text-yellow-700'
+                                                rv.statutRv === 'TERMINÉ' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {rv.statutRv}
                                         </span>

@@ -68,10 +68,10 @@ const GestionServices = () => {
                     title: "Service ajouté !",
                     description: "Le nouveau service a été enregistré avec succès. Redirection en cours...",
                 });
-                
-                // Rediriger vers la liste des services après 1 seconde
+
+                // Rediriger vers le profil aide-soignant après 1 seconde
                 setTimeout(() => {
-                    navigate("/services");
+                    navigate("/profile-aide-soignant");
                 }, 1500);
             } catch (error: any) {
                 toast({

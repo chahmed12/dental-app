@@ -17,7 +17,7 @@ const Footer = () => {
 
         </div>
         <p className="text-center text-xs text-muted-foreground mt-4">
-          © 2026 DentalCare - Plateforme de rendez-vous dentaires
+          © 2026 SmileClinic - Plateforme de rendez-vous dentaires
         </p>
       </div>
     </footer>

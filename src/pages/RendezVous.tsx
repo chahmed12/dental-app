@@ -61,7 +61,7 @@ const RendezVous = () => {
     dateRv: "",
     heureRv: "",
     detailsRv: "",
-    statutRv: "CONFIRMÉ",
+    statutRv: "EN ATTENTE",
     actes: [],
   });
 
@@ -148,8 +148,8 @@ const RendezVous = () => {
 
         setIsSubmitted(true);
         toast({
-          title: "Rendez-vous confirmé !",
-          description: "Votre demande a été enregistrée avec succès.",
+          title: "Demande envoyée !",
+          description: "Votre rendez-vous est en attente de validation par le praticien.",
         });
 
       } catch (error: any) {
@@ -278,18 +278,19 @@ const RendezVous = () => {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="text-center mb-8 animate-fade-up">
-        <h2 className="text-2xl font-bold text-red-500 bg-red-100 p-4 rounded-lg inline-block border border-red-200">
-          Un sourire éclatant commence ici : <br />
-          prenez rendez-vous facilement et rapidement
+        <h2 className="page-title text-center">
+          Un sourire éclatant commence ici
         </h2>
+        <p className="text-muted-foreground text-lg">
+          Prenez rendez-vous facilement et rapidement
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="card-dental animate-fade-up" style={{ animationDelay: "0.1s" }}>
-        {/* Sélection du dentiste */}
         {/* Date & Heure */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="form-label text-blue-800 font-semibold mb-2 block">Date de réservation</label>
+            <label className="form-label">Date de réservation</label>
             <div className="relative">
               <input
                 type="date"
@@ -297,18 +298,18 @@ const RendezVous = () => {
                 value={formData.dateRv}
                 onChange={handleChange}
                 min={today}
-                className={`form-input bg-cyan-50 border-cyan-100 text-center uppercase ${errors.dateRv ? "border-destructive" : ""}`}
+                className={`form-input text-center uppercase ${errors.dateRv ? "border-destructive focus:ring-destructive" : ""}`}
               />
             </div>
             {errors.dateRv && <p className="text-destructive text-sm mt-1">{errors.dateRv}</p>}
           </div>
           <div>
-            <label className="form-label text-blue-800 font-semibold mb-2 block">Heure</label>
+            <label className="form-label">Heure</label>
             <select
               name="heureRv"
               value={formData.heureRv}
               onChange={handleChange}
-              className={`form-input bg-cyan-50 border-cyan-100 text-center ${errors.heureRv ? "border-destructive" : ""}`}
+              className={`form-input text-center ${errors.heureRv ? "border-destructive focus:ring-destructive" : ""}`}
             >
               <option value="">-- : --</option>
               {heuresDisponibles.map((heure) => (
@@ -322,35 +323,49 @@ const RendezVous = () => {
         </div>
 
         {/* Choix de services dentaires */}
-        <div className="mb-8 border border-gray-300 p-4 rounded bg-white">
-          <h3 className="text-xl text-blue-400 font-bold mb-4 -mt-7 bg-white px-2 inline-block">Choix de services dentaires:</h3>
+        <div className="mb-8 p-6 rounded-xl bg-secondary/30 border border-border">
+          <h3 className="section-title text-xl mb-6">Services dentaires</h3>
 
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-6">
             <div className="w-full max-w-md">
-              <label className="text-center block text-blue-900 italic font-serif mb-1">Liste des services</label>
+              <label className="form-label text-center">Liste des services</label>
               <select
-                className="form-input bg-cyan-50 border-cyan-100 text-center"
+                className="form-input text-center"
                 value={selectedServiceToAdd}
                 onChange={(e) => setSelectedServiceToAdd(e.target.value)}
               >
-                <option value="">[Choisir service]</option>
+                <option value="">Sélectionner un service</option>
                 {availableServices.map(s => <option key={s.numSM} value={s.numSM}>{s.nomSM} ({s.tarifSM} DT)</option>)}
               </select>
             </div>
 
             <div className="flex gap-4">
-              <button type="button" onClick={handleAddService} className="bg-gray-200 border border-gray-400 px-4 py-1 text-sm font-bold opacity-70 hover:opacity-100">{">>>"}</button>
-              <button type="button" onClick={handleRemoveService} className="bg-gray-200 border border-gray-400 px-4 py-1 text-sm font-bold opacity-70 hover:opacity-100">{"<<<"}</button>
+              <button
+                type="button"
+                onClick={handleAddService}
+                className="btn-secondary py-2 px-4 hover:bg-primary hover:text-primary-foreground"
+                title="Ajouter le service"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveService}
+                className="btn-secondary py-2 px-4 hover:bg-destructive hover:text-destructive-foreground"
+                title="Retirer le service"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="w-full max-w-md">
-              <label className="text-center block text-blue-900 italic font-serif mb-1">Services retenus</label>
+              <label className="form-label text-center">Services retenus</label>
               <select
-                className="form-input bg-cyan-50 border-cyan-100 text-center"
+                className="form-input text-center"
                 value={selectedServiceToRemove}
                 onChange={(e) => setSelectedServiceToRemove(e.target.value)}
               >
-                <option value="">[Choisir pour retirer]</option>
+                <option value="">Sélectionner pour retirer</option>
                 {formData.actes.map(a => <option key={a.serviceMedical.numSM} value={a.serviceMedical.numSM}>{a.serviceMedical.nomSM}</option>)}
               </select>
             </div>
@@ -358,34 +373,34 @@ const RendezVous = () => {
 
           {/* Détails des ActeMedical sélectionnés */}
           {formData.actes.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-300">
-              <h4 className="text-lg font-semibold text-blue-700 mb-4">Détails des actes médicaux:</h4>
+            <div className="mt-8 pt-6 border-t border-border">
+              <h4 className="font-semibold text-lg mb-4 text-foreground/80">Détails des actes médicaux</h4>
               <div className="space-y-4">
                 {formData.actes.map((acte) => (
-                  <div key={acte.serviceMedical.numSM} className="bg-blue-50 border border-blue-200 rounded p-4">
-                    <div className="mb-3">
-                      <h5 className="font-semibold text-blue-900">{acte.serviceMedical.nomSM}</h5>
-                      <p className="text-sm text-gray-600">Tarif standard: {acte.serviceMedical.tarifSM} DT</p>
+                  <div key={acte.serviceMedical.numSM} className="bg-background border border-border rounded-lg p-5 shadow-sm">
+                    <div className="mb-3 flex justify-between items-center">
+                      <h5 className="font-semibold text-primary">{acte.serviceMedical.nomSM}</h5>
+                      <span className="text-sm px-2 py-1 bg-secondary rounded text-muted-foreground">Standard: {acte.serviceMedical.tarifSM} DT</span>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-blue-800 mb-1">Tarif facturé (tarifAM)</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Tarif facturé</label>
                         <input
                           type="number"
                           step="0.01"
                           value={acte.tarifAM}
                           onChange={(e) => handleUpdateActeTarif(acte.serviceMedical.numSM, parseFloat(e.target.value))}
-                          className="form-input bg-white border-blue-200 w-full"
+                          className="form-input h-10"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-blue-800 mb-1">Description (descriptionAM)</label>
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Description</label>
                         <input
                           type="text"
                           value={acte.descriptionAM}
                           onChange={(e) => handleUpdateActeDescription(acte.serviceMedical.numSM, e.target.value)}
-                          placeholder="Ex: Détartrage difficile, gencives sensibles"
-                          className="form-input bg-white border-blue-200 w-full"
+                          placeholder="Détails spécifiques..."
+                          className="form-input h-10"
                         />
                       </div>
                     </div>
@@ -396,17 +411,16 @@ const RendezVous = () => {
           )}
         </div>
 
-        {/* Hidden Dentist Selector (keeping for ID logic but hidden or minimized as per user request to follow image) */}
         {/* Dentist Selector */}
         <div className="mb-6">
-          <label className="form-label text-blue-800 font-semibold mb-2 block text-center">Choix du dentiste</label>
+          <label className="form-label text-center">Choix du dentiste</label>
           <div className="relative max-w-md mx-auto">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <select
               name="idD"
               value={formData.idD}
               onChange={handleChange}
-              className={`form-input pl-10 bg-cyan-50 border-cyan-100 ${errors.idD ? "border-destructive" : ""}`}
+              className={`form-input pl-10 ${errors.idD ? "border-destructive focus:ring-destructive" : ""}`}
             >
               <option value="">-- Sélectionner un dentiste --</option>
               {dentistes.map((dentiste) => (
@@ -419,20 +433,21 @@ const RendezVous = () => {
 
         {/* Details */}
         <div className="mb-8">
-          <label className="form-label text-blue-800 font-semibold mb-2 block text-center">Détails</label>
+          <label className="form-label text-center">Détails supplémentaires</label>
           <textarea
             name="detailsRv"
             value={formData.detailsRv}
             onChange={handleChange}
             rows={4}
-            className={`form-input resize-none bg-cyan-50 border-cyan-100 ${errors.detailsRv ? "border-destructive" : ""}`}
-            placeholder="Saisir les détails de rendez-vous.."
+            className={`form-input resize-none ${errors.detailsRv ? "border-destructive focus:ring-destructive" : ""}`}
+            placeholder="Saisir les motifs ou détails de rendez-vous..."
           />
           {errors.detailsRv && <p className="text-destructive text-sm mt-1">{errors.detailsRv}</p>}
         </div>
 
         <div className="flex justify-center">
-          <button type="submit" className="btn-primary w-full sm:w-auto min-w-[200px]">
+          <button type="submit" className="btn-primary w-full sm:w-auto min-w-[200px] flex items-center justify-center gap-2">
+            <CheckCircle className="w-5 h-5" />
             Confirmer le rendez-vous
           </button>
         </div>

@@ -82,13 +82,15 @@ const AideSoignant = () => {
         const { confirmMotDePasse, photo, ...data } = formData;
 
         const payload = {
-          nom: data.nom,
-          prenom: data.prenom,
-          email: data.email,
-          motDePasse: data.motDePasse,
-          specialite: data.diplome,
-          telephone: data.telephone,
-          sexe: data.sexe,
+          nomD: data.nom,
+          prenomD: data.prenom,
+          emailD: data.email,
+          mdpD: data.motDePasse,
+          specialiteD: data.diplome,
+          telD: data.telephone,
+          adresse: data.adresse,
+          sexeD: data.sexe,
+          date_naissance: data.dateNaissance,
         };
 
         console.log('📤 Sending payload:', payload);

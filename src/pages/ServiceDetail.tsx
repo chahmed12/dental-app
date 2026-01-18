@@ -40,7 +40,7 @@ const ServiceDetail = () => {
             try {
                 setLoading(true);
                 const data = await apiRequest<ServiceMedical>(`/services/${id}`, "GET");
-                
+
                 if (!data) {
                     throw new Error("Service non trouvé");
                 }
@@ -163,7 +163,7 @@ const ServiceDetail = () => {
                 {/* Action Button */}
                 <div className="mt-8 pt-6 border-t border-border flex justify-center">
                     <button
-                        onClick={() => navigate("/rendez-vous")}
+                        onClick={() => navigate("/")}
                         className="btn-primary"
                     >
                         Prendre rendez-vous

@@ -1,8 +1,9 @@
-import { User, Calendar, Clock, MapPin, Phone, Mail, LogOut } from "lucide-react";
+import { User, Calendar, Clock, MapPin, Phone, Mail, LogOut, Check, X, Shield, Trash2, Edit2, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 // Define interfaces for data
 interface AideSoignantInfo {
@@ -19,6 +20,7 @@ interface RendezVous {
   dateRv: string;
   heureRv: string;
   statutRv: string;
+  detailsRv: string;
   type: string; // Assuming 'type' exists or mapping DETAILS as type
   patient?: {
     nomP: string;
@@ -30,16 +32,23 @@ interface RendezVous {
   };
 }
 
-
+interface ServiceMedical {
+  numSM: number;
+  nomSM: string;
+  tarifSM: number;
+  descriptionSM: string;
+}
 
 const ProfileAideSoignant = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toast } = useToast();
 
   const [info, setInfo] = useState<AideSoignantInfo>({
     nom: "", prenom: "", email: "", telephone: "", poste: "Dentiste / Aide-Soignant", service: "Clinique Dentaire"
   });
   const [rendezvous, setRendezvous] = useState<RendezVous[]>([]);
+  const [services, setServices] = useState<ServiceMedical[]>([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -63,9 +72,17 @@ const ProfileAideSoignant = () => {
           // In a real app, this should be /rendezvous/today or similar
           const rdvData = await apiRequest<any[]>("/rendezvous", "GET");
           if (Array.isArray(rdvData)) {
-            // Filter or show all? Showing all for staff dashboard usually
-            setRendezvous(rdvData);
+            // Filter to show only appointments for this dentist
+            const myRdv = rdvData.filter((r: any) => r.dentiste?.idD === user.id);
+            setRendezvous(myRdv);
           }
+
+          // Fetch Services
+          const servicesData = await apiRequest<ServiceMedical[]>("/services", "GET");
+          if (Array.isArray(servicesData)) {
+            setServices(servicesData);
+          }
+
         } catch (err) {
           console.error("Error fetching dashboard data", err);
         }
@@ -73,6 +90,39 @@ const ProfileAideSoignant = () => {
       fetchData();
     }
   }, [user]);
+
+  const handleUpdateStatus = async (rdv: RendezVous, newStatus: string) => {
+    try {
+      // Create a payload. The backend might expect the full updated object.
+      // We'll trust that the backend can handle a partial update or full update.
+      // Based on typical patterns, we send the updated object to a PUT endpoint.
+      const updatedRdv = { ...rdv, statutRv: newStatus };
+
+      // Sending PUT to /rendezvous (assuming standard REST update)
+      await apiRequest(`/rendezvous`, "PUT", updatedRdv);
+
+      // Update local state to reflect change immediately
+      setRendezvous(prev => prev.map(r => r.idRv === rdv.idRv ? { ...r, statutRv: newStatus } : r));
+      toast({ title: "Succès", description: "Statut du rendez-vous mis à jour." });
+    } catch (error) {
+      console.error("Failed to update status", error);
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour le statut." });
+    }
+  };
+
+  const handleDeleteService = async (serviceId: number) => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce service ?")) {
+      try {
+        await apiRequest(`/services/${serviceId}`, "DELETE");
+        setServices(prev => prev.filter(s => s.numSM !== serviceId));
+        toast({ title: "Service supprimé", description: "Le service a été retiré de la liste." });
+      } catch (error) {
+        console.error("Failed to delete service", error);
+        toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer le service." });
+      }
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="text-center mb-8 animate-fade-up">
@@ -84,10 +134,7 @@ const ProfileAideSoignant = () => {
           <button onClick={() => navigate("/publication")} className="btn-primary">
             Nouvelle Publication
           </button>
-          <button onClick={() => navigate("/services/gestion")} className="btn-primary">
-            Gérer les Services
-          </button>
-          <button onClick={logout} className="btn-secondary flex items-center gap-2">
+          <button onClick={() => { logout(); navigate("/"); }} className="btn-secondary flex items-center gap-2">
             <LogOut className="w-4 h-4" /> Déconnexion
           </button>
         </div>
@@ -164,23 +211,110 @@ const ProfileAideSoignant = () => {
                       <p className="text-sm text-primary">{rdv.detailsRv}</p>
                     </div>
 
-                    <div className="flex-shrink-0">
+                    <div className="flex flex-col items-end gap-2">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${rdv.statutRv === "CONFIRMÉ"
                           ? "bg-success/10 text-success"
-                          : "bg-warning/10 text-warning"
+                          : rdv.statutRv === "REFUSÉ" || rdv.statutRv === "ANNULÉ"
+                            ? "bg-destructive/10 text-destructive"
+                            : rdv.statutRv === "TERMINÉ"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-warning/10 text-warning"
                           }`}
                       >
                         {rdv.statutRv}
                       </span>
+
+                      {rdv.statutRv === "EN ATTENTE" && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleUpdateStatus(rdv, "CONFIRMÉ")}
+                            className="p-1 rounded bg-success/20 text-success hover:bg-success/30"
+                            title="Confirmer"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(rdv, "REFUSÉ")}
+                            className="p-1 rounded bg-destructive/20 text-destructive hover:bg-destructive/30"
+                            title="Refuser"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+
+                      {rdv.statutRv === "CONFIRMÉ" && (
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => handleUpdateStatus(rdv, "TERMINÉ")}
+                            className="p-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            title="Marquer comme terminé"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )))}
             </div>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* Mes Services */}
+        <div className="lg:col-span-3 animate-fade-up" style={{ animationDelay: "0.3s" }}>
+          <div className="card-dental">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="section-title flex items-center gap-2 mb-0">
+                <Package className="w-5 h-5 text-primary" />
+                Mes Services
+              </h3>
+              <button
+                onClick={() => navigate("/services/gestion")}
+                className="btn-primary text-sm px-4 py-2"
+              >
+                Ajouter un Service
+              </button>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {services.length === 0 ? (
+                <div className="col-span-3 text-center py-8 text-muted-foreground">
+                  Aucun service disponible.
+                </div>
+              ) : (
+                services.map((service) => (
+                  <div key={service.numSM} className="bg-white border p-4 rounded-lg shadow-sm flex flex-col justify-between h-full">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold text-foreground text-lg">{service.nomSM}</h4>
+                        <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full font-bold">
+                          {service.tarifSM} TND
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                        {service.descriptionSM}
+                      </p>
+                    </div>
+                    <div className="flex justify-end pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => handleDeleteService(service.numSM)}
+                        className="text-destructive hover:bg-destructive/10 p-2 rounded-full transition-colors"
+                        title="Supprimer ce service"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div >
+
+      </div >
+    </div >
   );
 };
 
